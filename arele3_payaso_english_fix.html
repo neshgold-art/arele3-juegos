@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="yi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>פֿון אײנס ביז צען — Árele 3</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:#fff;font-family:Arial,sans-serif;display:flex;flex-direction:column;align-items:center;padding:16px;}
+  .titulo-arriba{font-size:20px;font-weight:400;text-align:center;color:#1a1a1a;margin-bottom:8px;}
+  .canvas-wrap{position:relative;width:100%;max-width:840px;margin:0 auto;}
+  canvas{display:block;width:100%;border-radius:8px;border:2.5px solid #c0392b;background:#fff;cursor:crosshair;touch-action:none;}
+  .dot-label{position:absolute;transform:translate(-50%,-50%);font-family:Arial,sans-serif;font-size:15px;font-weight:400;color:#1a1a1a;cursor:pointer;user-select:none;text-align:center;line-height:1;}
+  .dot-label .dot{display:block;width:5px;height:5px;border-radius:50%;background:#999;margin:0 auto 3px auto;}
+  .dot-label.done{color:var(--ink);}
+  .dot-label.done .dot{background:var(--ink);}
+  .dot-label.next{color:#534AB7;}
+  .dot-label.next .dot{background:#534AB7;}
+  .msg{font-size:13px;margin-top:8px;min-height:18px;color:#888;text-align:center;}
+  .msg.win{color:#0F6E56;font-weight:500;}
+  .controls{display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap;justify-content:center;}
+  .br{padding:5px 14px;border-radius:8px;border:0.5px solid #ccc;background:transparent;color:#1a1a1a;font-size:12px;cursor:pointer;font-family:Arial,sans-serif;}
+  .br:hover{background:#f5f5f5;}
+  .color-label{font-size:12px;color:#888;}
+  .color-btn{width:22px;height:22px;border-radius:50%;border:2px solid transparent;cursor:pointer;}
+  .color-btn.active{border-color:#333;}
+  .bottom-row{display:flex;align-items:center;margin-top:10px;gap:8px;direction:rtl;width:100%;max-width:840px;}
+  .pregunta{font-size:20px;font-weight:400;color:#1a1a1a;white-space:nowrap;font-family:Arial,sans-serif;}
+  .linea{flex:1;border:none;border-bottom:1.5px solid #1a1a1a;background:transparent;outline:none;font-size:20px;font-family:Arial,sans-serif;font-weight:400;color:#1a1a1a;padding:2px 4px;direction:rtl;min-width:60px;}
+</style>
+</head>
+<body>
+<p class="titulo-arriba">פֿון אײנס ביז צען</p>
+<div class="canvas-wrap" id="wrap">
+  <canvas id="gc" width="840" height="645"></canvas>
+</div>
+<p class="msg" id="msg">Touch <strong>אײנס</strong> to start!</p>
+<div class="controls">
+  <button class="br" onclick="resetGame()">↺ Start over</button>
+  <span class="color-label">Color:</span>
+  <button class="color-btn active" style="background:#1D9E75" onclick="setColor('#1D9E75',this)"></button>
+  <button class="color-btn" style="background:#534AB7" onclick="setColor('#534AB7',this)"></button>
+  <button class="color-btn" style="background:#c0392b" onclick="setColor('#c0392b',this)"></button>
+  <button class="color-btn" style="background:#E8A020" onclick="setColor('#E8A020',this)"></button>
+  <button class="color-btn" style="background:#1a6fad" onclick="setColor('#1a6fad',this)"></button>
+  <button class="color-btn" style="background:#1a1a1a" onclick="setColor('#1a1a1a',this)"></button>
+</div>
+<div class="bottom-row">
+  <span class="pregunta">וואָס האָסטו געפֿונען?</span>
+  <input class="linea" type="text" placeholder="" aria-label="Write your answer"/>
+</div>
+<script>
+const W=840,H=645,CX=420;
+const YIDDISH=['','אײנס','צוויי','דרײ','פֿיר','פֿינף','זעקס','זיבן','אַכט','נײן','צען'];
+const P=[
+  {x:620,y:270},{x:CX,y:150},{x:220,y:270},
+  {x:205,y:355},{x:195,y:460},{x:295,y:560},
+  {x:CX,y:592},{x:545,y:560},{x:645,y:460},{x:635,y:355}
+];
+const MSGS={start:'Touch <strong>אײנס</strong> to start!',good:'Great! Now touch',win:'🎪 !סוף — וואָס האָסטו געפֿונען?'};
+let inkColor='#1D9E75',next=1,drawn=[],won=false;
+const canvas=document.getElementById('gc'),ctx=canvas.getContext('2d'),msgEl=document.getElementById('msg'),wrap=document.getElementById('wrap');
+const labels=[];
+P.forEach((p,i)=>{
+  const el=document.createElement('div');
+  el.className='dot-label';
+  el.innerHTML=`<span class="dot"></span>${YIDDISH[i+1]}`;
+  el.addEventListener('click',()=>handleTap(i+1));
+  el.addEventListener('touchstart',(e)=>{e.preventDefault();handleTap(i+1);},{passive:false});
+  wrap.appendChild(el);labels.push(el);
+});
+function positionLabels(){
+  const rect=canvas.getBoundingClientRect(),wRect=wrap.getBoundingClientRect();
+  const sx=rect.width/W,sy=rect.height/H;
+  P.forEach((p,i)=>{
+    labels[i].style.left=((p.x*sx)+(rect.left-wRect.left))+'px';
+    // Offset labels 1 and 3 (index 0 and 2) upward so they clear the hat brim
+    const yOff=(i===0||i===2)?-32*sy:(i===1)?-20*sy:0;
+    labels[i].style.top=((p.y*sy)+(rect.top-wRect.top)+yOff)+'px';
+    labels[i].style.setProperty('--ink',inkColor);
+  });
+}
+function updateLabels(){
+  labels.forEach((el,i)=>{
+    const n=i+1,done=drawn.includes(n),isNext=n===next&&!won;
+    el.className='dot-label'+(done?' done':isNext?' next':'');
+    el.style.setProperty('--ink',inkColor);
+    el.style.color=done?inkColor:isNext?'#534AB7':'#1a1a1a';
+    el.querySelector('.dot').style.background=done?inkColor:isNext?'#534AB7':'#999';
+  });
+}
+function setColor(c,btn){
+  inkColor=c;
+  document.querySelectorAll('.color-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  updateLabels();render();
+}
+function drawStatic(){
+  ctx.save();
+  ctx.strokeStyle='#c0392b';ctx.lineWidth=4;ctx.strokeRect(4,4,W-8,H-8);
+  // Two equal hat balls between צוויי label and brim
+  ctx.fillStyle='#1a1a1a';
+  ctx.beginPath();ctx.arc(CX,185,18,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(CX,235,18,0,Math.PI*2);ctx.fill();
+  ctx.fillRect(P[2].x,P[0].y,P[0].x-P[2].x,12);
+  ctx.strokeStyle='#1a1a1a';ctx.lineWidth=0.25;
+  for(let x=P[2].x+8;x<P[0].x;x+=10){ctx.beginPath();ctx.moveTo(x,P[0].y+12);ctx.lineTo(x-7,P[0].y+28);ctx.stroke();}
+  ctx.strokeStyle='#1a1a1a';ctx.lineWidth=3;
+  ctx.beginPath();ctx.arc(345,375,27,Math.PI,0);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(345,375);ctx.lineTo(345,400);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(318,375);ctx.lineTo(318,365);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(372,375);ctx.lineTo(372,365);ctx.stroke();
+  ctx.beginPath();ctx.arc(495,375,27,Math.PI,0);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(495,375);ctx.lineTo(495,400);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(468,375);ctx.lineTo(468,365);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(522,375);ctx.lineTo(522,365);ctx.stroke();
+  ctx.beginPath();ctx.arc(CX,445,30,0,Math.PI*2);ctx.stroke();
+  ctx.beginPath();ctx.arc(CX,458,72,0.25,Math.PI-0.25);ctx.stroke();
+  // סוף — bigger, next to point 10 (index 9), to the right
+  ctx.font='bold 22px Arial,sans-serif';ctx.fillStyle='#c0392b';ctx.textAlign='left';ctx.textBaseline='middle';
+  ctx.fillText('סוף',P[9].x+28,P[9].y);
+  ctx.restore();
+}
+function drawLines(){
+  if(drawn.length<2)return;
+  ctx.save();ctx.strokeStyle=inkColor;ctx.lineWidth=3;ctx.lineJoin='round';
+  ctx.beginPath();ctx.moveTo(P[drawn[0]-1].x,P[drawn[0]-1].y);
+  for(let i=1;i<drawn.length;i++){
+    const prev=P[drawn[i-1]-1],curr=P[drawn[i]-1],pidx=drawn[i-1],cidx=drawn[i];
+    if((pidx===1&&cidx===2)||(pidx===2&&cidx===3)){ctx.lineTo(curr.x,curr.y);}
+    else{const mx=(prev.x+curr.x)/2,my=(prev.y+curr.y)/2;ctx.quadraticCurveTo(prev.x,prev.y,mx,my);ctx.lineTo(curr.x,curr.y);}
+  }
+  if(won)ctx.lineTo(P[0].x,P[0].y);
+  ctx.stroke();ctx.restore();
+}
+function render(){ctx.clearRect(0,0,W,H);drawStatic();drawLines();positionLabels();updateLabels();}
+function handleTap(n){
+  if(won||n!==next)return;
+  drawn.push(next);
+  if(next===10){won=true;msgEl.innerHTML=MSGS.win;msgEl.className='msg win';}
+  else{next++;msgEl.innerHTML=`${MSGS.good} <strong>${YIDDISH[next]}</strong>`;}
+  render();
+}
+function resetGame(){next=1;drawn=[];won=false;msgEl.innerHTML=MSGS.start;msgEl.className='msg';render();}
+window.addEventListener('resize',positionLabels);
+render();
+</script>
+</body>
+</html>
