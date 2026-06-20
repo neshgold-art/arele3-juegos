@@ -6,50 +6,58 @@
 <title>קאָלירן — Árele 3</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0;}
-  body{background:#fff;font-family:Arial,sans-serif;display:flex;flex-direction:column;align-items:center;padding:16px;}
-  .titulo{font-size:20px;font-weight:400;text-align:center;color:#1a1a1a;margin-bottom:8px;direction:rtl;}
-  .canvas-wrap{position:relative;width:100%;max-width:840px;margin:0 auto;}
-  canvas{display:block;width:100%;border-radius:8px;border:2.5px solid #c0392b;background:#fff;cursor:pointer;touch-action:none;}
-  .crayons-row{display:flex;gap:8px;justify-content:center;margin-top:8px;max-width:840px;margin-left:auto;margin-right:auto;}
-  .crayon{display:flex;align-items:center;gap:8px;padding:8px 18px;border-radius:24px;border:2.5px solid transparent;cursor:pointer;font-size:18px;font-weight:400;font-family:Arial,sans-serif;}
+  html,body{height:100%;}
+  body{background:#fff;font-family:Arial,sans-serif;display:flex;justify-content:center;align-items:flex-start;padding:8px;}
+  /* Letter landscape: 28 x 21.5 cm => aspect-ratio 28/21.5 */
+  .page{width:100%;max-width:980px;aspect-ratio:28/21.5;border:2.5px solid #c0392b;border-radius:8px;
+        display:flex;flex-direction:column;padding:1.5%;background:#fff;}
+  .titulo{font-size:clamp(14px,2.4vw,22px);font-weight:400;text-align:center;color:#1a1a1a;direction:rtl;flex:0 0 auto;margin-bottom:0.5%;}
+  .canvas-wrap{position:relative;width:100%;flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center;}
+  canvas{display:block;width:100%;height:auto;aspect-ratio:900/380;background:#fff;cursor:pointer;touch-action:none;}
+  .crayons-row{display:flex;gap:1.5%;justify-content:center;margin-top:1%;flex:0 0 auto;}
+  .crayon{display:flex;align-items:center;gap:5px;padding:0.6% 1.4%;border-radius:24px;border:2px solid transparent;cursor:pointer;font-size:clamp(11px,1.7vw,17px);font-weight:400;font-family:Arial,sans-serif;}
   .crayon:hover{opacity:0.85;}
   .crayon.selected{border-color:#333;}
-  .crayon .swatch{width:22px;height:22px;border-radius:50%;border:1px solid #ccc;flex-shrink:0;}
-  .msg{font-size:13px;margin-top:8px;text-align:center;color:#888;min-height:18px;width:100%;max-width:840px;}
+  .crayon .swatch{width:clamp(12px,1.6vw,18px);height:clamp(12px,1.6vw,18px);border-radius:50%;border:1px solid #ccc;flex-shrink:0;}
+  .msg{font-size:clamp(10px,1.4vw,13px);text-align:center;color:#888;min-height:14px;flex:0 0 auto;margin-top:0.5%;}
   .msg.win{color:#0F6E56;font-weight:500;}
-  .br{display:block;margin:10px auto 0;padding:6px 20px;border-radius:8px;border:0.5px solid #ccc;background:transparent;color:#1a1a1a;font-size:13px;cursor:pointer;font-family:Arial,sans-serif;}
+  .br{align-self:center;margin-top:0.6%;padding:0.5% 2%;border-radius:8px;border:0.5px solid #ccc;background:transparent;color:#1a1a1a;font-size:clamp(10px,1.4vw,13px);cursor:pointer;font-family:Arial,sans-serif;flex:0 0 auto;}
   .br:hover{background:#f5f5f5;}
 </style>
 </head>
 <body>
-<p class="titulo">קאָלירן 🖍️</p>
-<div class="canvas-wrap">
-  <canvas id="gc" width="840" height="560"></canvas>
+<div class="page">
+  <p class="titulo">קאָלירן 🖍️</p>
+  <div class="canvas-wrap">
+    <canvas id="gc" width="900" height="380"></canvas>
+  </div>
+  <p class="msg" id="msg">Pick a color and tap a shape to paint it</p>
+  <div class="crayons-row" id="row1"></div>
+  <div class="crayons-row" id="row2"></div>
+  <button class="br" onclick="resetGame()">↺ Start over</button>
 </div>
-<p class="msg" id="msg">Choose a color and tap the shape to paint it</p>
-<div class="crayons-row" id="row1"></div>
-<div class="crayons-row" id="row2"></div>
-<button class="br" onclick="resetGame()">↺ Start over</button>
 <script>
-const W=840,H=560;
-const COLORS=[
-  {name:'רויט',    es:'Rojo',    hex:'#e63030'},
-  {name:'גרין',    es:'Verde',   hex:'#2eaa2e'},
-  {name:'געל',     es:'Amarillo',hex:'#f5c800'},
-  {name:'בלוי',    es:'Azul',    hex:'#2255cc'},
-  {name:'בראון',   es:'Marrón',  hex:'#8B4513'},
-  {name:'שוואַרץ', es:'Negro',   hex:'#1a1a1a'},
-  {name:'ווייס',   es:'Blanco',  hex:'#f0f0f0'},
-  {name:'אָראַנזש', es:'Naranja', hex:'#f57c00'},
-  {name:'גרוי',    es:'Gris',    hex:'#888888'},
-  {name:'ראָז',    es:'Rosa',    hex:'#f06090'},
+const W=900,H=380;
+const ROW1=[
+  {name:'ברוין',   es:'Marrón',  en:'Brown',  hex:'#8B4513'},
+  {name:'בלוי',    es:'Azul',    en:'Blue',   hex:'#2255cc'},
+  {name:'געל',     es:'Amarillo',en:'Yellow', hex:'#f5c800'},
+  {name:'גרין',    es:'Verde',   en:'Green',  hex:'#2eaa2e'},
+  {name:'רויט',    es:'Rojo',    en:'Red',    hex:'#e63030'},
 ];
-const COL=[90,258,420,582,750],R1Y=185,R2Y=430,SZ=120;
+const ROW2=[
+  {name:'שוואַרץ', es:'Negro',   en:'Black',  hex:'#1a1a1a'},
+  {name:'ווייס',   es:'Blanco',  en:'White',  hex:'#f0f0f0'},
+  {name:'אָראַנזש', es:'Naranja', en:'Orange', hex:'#f57c00'},
+  {name:'גרוי',    es:'Gris',    en:'Gray',   hex:'#888888'},
+  {name:'ראָז',    es:'Rosa',    en:'Pink',   hex:'#f06090'},
+];
+const COL=[110,290,470,650,810],R1Y=110,R2Y=275,SZ=120;
 const SHAPES=[
-  {type:'circle',cx:COL[0],cy:R1Y,r:SZ/2,label:'בראון',   correct:'#8B4513',fill:'#fff'},
-  {type:'rect',  x:COL[1]-SZ/2,y:R1Y-SZ/2,w:SZ,h:SZ,label:'גרין',    correct:'#2eaa2e',fill:'#fff'},
+  {type:'circle',cx:COL[0],cy:R1Y,r:SZ/2,label:'ברוין',   correct:'#8B4513',fill:'#fff'},
+  {type:'rect',  x:COL[1]-SZ/2,y:R1Y-SZ/2,w:SZ,h:SZ,label:'בלוי',    correct:'#2255cc',fill:'#fff'},
   {type:'circle',cx:COL[2],cy:R1Y,r:SZ/2,label:'געל',     correct:'#f5c800',fill:'#fff'},
-  {type:'rect',  x:COL[3]-SZ/2,y:R1Y-SZ/2,w:SZ,h:SZ,label:'בלוי',    correct:'#2255cc',fill:'#fff'},
+  {type:'rect',  x:COL[3]-SZ/2,y:R1Y-SZ/2,w:SZ,h:SZ,label:'גרין',    correct:'#2eaa2e',fill:'#fff'},
   {type:'circle',cx:COL[4],cy:R1Y,r:SZ/2,label:'רויט',    correct:'#e63030',fill:'#fff'},
   {type:'rect',  x:COL[0]-SZ/2,y:R2Y-SZ/2,w:SZ,h:SZ,label:'שוואַרץ', correct:'#1a1a1a',fill:'#fff'},
   {type:'circle',cx:COL[1],cy:R2Y,r:SZ/2,label:'ווייס',   correct:'#f0f0f0',fill:'#fff'},
@@ -57,31 +65,37 @@ const SHAPES=[
   {type:'circle',cx:COL[3],cy:R2Y,r:SZ/2,label:'גרוי',    correct:'#888888',fill:'#fff'},
   {type:'rect',  x:COL[4]-SZ/2,y:R2Y-SZ/2,w:SZ,h:SZ,label:'ראָז',    correct:'#f06090',fill:'#fff'},
 ];
+const LANG='en';
 let selectedColor=null;
 const canvas=document.getElementById('gc'),ctx=canvas.getContext('2d'),msgEl=document.getElementById('msg');
-COLORS.forEach((c,i)=>{
-  const btn=document.createElement('button');
-  btn.className='crayon';
-  btn.innerHTML=`<span class="swatch" style="background:${c.hex};"></span><span style="direction:rtl">${c.name}</span>`;
-  btn.style.background=c.hex+'22';
-  btn.addEventListener('click',()=>{
-    document.querySelectorAll('.crayon').forEach(b=>b.classList.remove('selected'));
-    btn.classList.add('selected'); selectedColor=c;
-    msgEl.textContent=`Color chosen: ${c.es} — now tap a shape`; msgEl.className='msg';
+function addCrayons(list,rowId){
+  list.forEach(c=>{
+    const btn=document.createElement('button');
+    btn.className='crayon';
+    btn.innerHTML=`<span class="swatch" style="background:${c.hex};"></span><span style="direction:rtl">${c.name}</span>`;
+    btn.style.background=c.hex+'22';
+    btn.addEventListener('click',()=>{
+      document.querySelectorAll('.crayon').forEach(b=>b.classList.remove('selected'));
+      btn.classList.add('selected'); selectedColor=c;
+      const nm=LANG==='es'?c.es:c.en;
+      msgEl.textContent=(LANG==='es'?`Color elegido: ${nm} — ahora toca una forma`:`Color chosen: ${nm} — now tap a shape`); msgEl.className='msg';
+    });
+    document.getElementById(rowId).appendChild(btn);
   });
-  document.getElementById(i<5?'row1':'row2').appendChild(btn);
-});
+}
+addCrayons(ROW1,'row1');
+addCrayons(ROW2,'row2');
 function drawShape(s){
   ctx.save(); ctx.fillStyle=s.fill; ctx.strokeStyle='#1a1a1a'; ctx.lineWidth=2.5;
   if(s.type==='circle'){ctx.beginPath();ctx.arc(s.cx,s.cy,s.r,0,Math.PI*2);ctx.fill();ctx.stroke();}
   else{ctx.beginPath();ctx.roundRect(s.x,s.y,s.w,s.h,8);ctx.fill();ctx.stroke();}
-  ctx.fillStyle='#1a1a1a'; ctx.font='18px Arial,sans-serif';
+  ctx.fillStyle='#1a1a1a'; ctx.font='17px Arial,sans-serif';
   ctx.textAlign='center'; ctx.textBaseline='top';
-  const lx=s.type==='circle'?s.cx:s.x+s.w/2, ly=s.type==='circle'?s.cy+s.r+10:s.y+s.h+10;
+  const lx=s.type==='circle'?s.cx:s.x+s.w/2, ly=s.type==='circle'?s.cy+s.r+8:s.y+s.h+8;
   ctx.fillText(s.label,lx,ly); ctx.restore();
 }
 function render(){
-  ctx.clearRect(0,0,W,H); ctx.strokeStyle='#c0392b'; ctx.lineWidth=4; ctx.strokeRect(4,4,W-8,H-8);
+  ctx.clearRect(0,0,W,H);
   SHAPES.forEach(s=>drawShape(s));
 }
 function hitTest(s,x,y){
@@ -94,13 +108,14 @@ function getPos(e){
 }
 function handleClick(e){
   e.preventDefault();
-  if(!selectedColor){msgEl.textContent='First choose a color below!';return;}
+  if(!selectedColor){msgEl.textContent='Pick a color from below first!';return;}
   const{x,y}=getPos(e);
   for(let s of SHAPES){
     if(hitTest(s,x,y)){
       s.fill=selectedColor.hex; render();
+      const nm=LANG==='es'?selectedColor.es:selectedColor.en;
       if(SHAPES.every(sh=>sh.fill===sh.correct)){msgEl.innerHTML='🎨 You painted everything!';msgEl.className='msg win';}
-      else{msgEl.textContent=`Color chosen: ${selectedColor.es} — keep painting`;}
+      else{msgEl.textContent=(LANG==='es'?`Color elegido: ${nm} — sigue pintando`:`Color chosen: ${nm} — keep painting`);}
       return;
     }
   }
@@ -108,7 +123,7 @@ function handleClick(e){
 function resetGame(){
   SHAPES.forEach(s=>s.fill='#fff'); selectedColor=null;
   document.querySelectorAll('.crayon').forEach(b=>b.classList.remove('selected'));
-  msgEl.textContent='Choose a color and tap the shape to paint it'; msgEl.className='msg'; render();
+  msgEl.textContent='Pick a color and tap a shape to paint it'; msgEl.className='msg'; render();
 }
 canvas.addEventListener('click',handleClick);
 canvas.addEventListener('touchstart',handleClick,{passive:false});
